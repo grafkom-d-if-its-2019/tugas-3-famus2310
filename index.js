@@ -1,320 +1,384 @@
 (function() {
 
-  var canvas, gl, program;
-
   glUtils.SL.init({ callback: function() { main(); }});
   function main() {
-    // window.addEventListener('resize', resizer);
-    canvas = document.getElementById("glcanvas");
-    gl = glUtils.checkWebGL(canvas);
-    // initGLSize();
+    var canvas = document.getElementById("glcanvas");
+    var gl = glUtils.checkWebGL(canvas);
     var vertexShader = glUtils.getShader(gl, gl.VERTEX_SHADER, glUtils.SL.Shaders.v1.vertex);
     var fragmentShader = glUtils.getShader(gl, gl.FRAGMENT_SHADER, glUtils.SL.Shaders.v1.fragment);
-    program = glUtils.createProgram(gl, vertexShader, fragmentShader);
+    var program = glUtils.createProgram(gl, vertexShader, fragmentShader);
     gl.useProgram(program);
-    
-    // resizer();
-    draw();
-  }
 
-  function degToRad(x) {
-    return x * Math.PI / 180;
-  }
-
-  function initBuffers() {
-    var ret = [];
+    // Mendefinisikan verteks-verteks
     var vertices = [];
-    
-    var vertexBuffer = gl.createBuffer();
-    if (!vertexBuffer) {
-      alert("Gagal membuat buffer");
-      return -1;
+    var fVertices = [];
+    var fPoints = [
+    /*
+    -0.1, -0,5
+-0.1, 0.5
+0.1, 0.5
+0.1, -0.5
+
+0.1, 0.3
+0.1, 0.5
+0.5, 0.5
+0.5, 0.3
+
+0.1, -0.1
+0.1, 0.1
+0.5, 0.1
+0.5, -0.1
+    */
+      [-0.1, -0.5, -0.1], //1
+      [-0.1, 0.5, -0.1], //2
+      [0.1, 0.5, -0.1], //3
+      [0.1, -0.5, -0.1], //4
+
+      [0.1, 0.3, -0.1], //5
+      [0.1, 0.5, -0.1], //6
+      [0.5, 0.5, -0.1], //7
+      [0.5, 0.3, -0.1], //8
+
+      [0.1, -0.1, -0.1], //9
+      [0.1, 0.1, -0.1], //10
+      [0.5, 0.1, -0.1], //11
+      [0.5, -0.1, -0.1], // 12
+
+      [-0.1, -0.5, 0.1], //13
+      [-0.1, 0.5, 0.1], //14
+      [0.1, 0.5, 0.1], //15 
+      [0.1, -0.5, 0.1], //16
+
+      [0.1, 0.3, 0.1], //17
+      [0.1, 0.5, 0.1], //18
+      [0.5, 0.5, 0.1], //19
+      [0.5, 0.3, 0.1], //20
+
+      [0.1, -0.1, 0.1], //21
+      [0.1, 0.1, 0.1], //22
+      [0.5, 0.1, 0.1], //23
+      [0.5, -0.1, 0.1] //24
+    ];
+    var cubePoints = [
+      [ -0.5, -0.5,  0.5 ],
+      [ -0.5,  0.5,  0.5 ],
+      [  0.5,  0.5,  0.5 ],
+      [  0.5, -0.5,  0.5 ],
+      [ -0.5, -0.5, -0.5 ],
+      [ -0.5,  0.5, -0.5 ],
+      [  0.5,  0.5, -0.5 ],
+      [  0.5, -0.5, -0.5 ]
+    ];
+    var fColor = [
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+      [0, 0, 1],
+
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0]
+    ]
+
+    var moveFX = 0,
+        moveFY = 0,
+        moveFZ = 0;
+
+    var dirFX = 1,
+        dirFY = 1,
+        dirFZ = 1;
+
+    var scaleF = 0.1; 
+
+    var eps = 0.05;
+
+    var cube = {
+      top : null,
+      bottom : null,
+      left : null, 
+      right : null,
+      front : null,
+      back : null,
     }
 
-    var upsideRight = 172.5;
-    var upsideLeft = 187.5;
-    var delta = 0.1;
-    for (var i = 0; i <= upsideRight; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.5*Math.sin(j));
-      vertices = vertices.concat(0.5*Math.cos(j));
+    var rotFY = 0;
+    function quad(a, b, c, d) {
+      var indices = [a, b, b, c, c, d, d, a];
+      for (var i=0; i < indices.length; i++) {
+        for (var j=0; j < 3; j++) {
+          vertices.push(cubePoints[indices[i]][j]);
+        }
+        vertices.push(1);
+        vertices.push(1);
+        vertices.push(0);
+      }
     }
-    for (var i = upsideLeft; i <= 360; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.5*Math.sin(j));
-      vertices = vertices.concat(0.5*Math.cos(j));
-    }
-    ret = ret.concat(0);
-    ret = ret.concat(vertices.length / 2);
-    ret = ret.concat(vertices.length / 2);
-    var last = vertices.length / 2;
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), 0.5 * Math.cos(degToRad(upsideRight))]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), -0.15]);
-    vertices = vertices.concat([0.15, -0.15]);
-    vertices = vertices.concat([0.2, -0.03]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), -0.03]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), 0.075]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), 0.5 * Math.cos(degToRad(upsideLeft))]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), -0.15]);
-    vertices = vertices.concat([-0.18, -0.15]);
-    vertices = vertices.concat([-0.18, -0.03]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), -0.03]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), 0.075]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 270; i <= 360; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.2*Math.sin(j) + 0.135);
-      vertices = vertices.concat(0.2*Math.cos(j) + 0.075);
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 270; i <= 360; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.05*Math.sin(j) + 0.115);
-      vertices = vertices.concat(0.05*Math.cos(j) + 0.075);
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    vertices = vertices.concat([0.05*Math.sin(degToRad(360)) + 0.115, 0.05*Math.cos(degToRad(360)) + 0.075]);
-    vertices = vertices.concat([0.2, 0.05*Math.cos(degToRad(360)) + 0.075]);
-    vertices = vertices.concat([0.2, 0.27]);
-    vertices = vertices.concat([0.2*Math.sin(degToRad(360)) + 0.135, 0.2*Math.cos(degToRad(360)) + 0.075]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
 
+    function push_rect(a, b, c, d) {
+      var indices = [a, b, c, a, c, d];
+      for (var i=0; i < indices.length; i++) {
+        for (var j=0; j < 3; j++) {
+          vertices.push(fPoints[indices[i]][j]);
+        }
+        for (var j=0; j < 3; j++) {
+          vertices.push(fColor[indices[i]][j]);
+        }
+      }
+    }
 
-    //gambar kanan
-    upsideRight = 172.5;
-    upsideLeft = 187.5; 
-    delta = 0.1;
-    for (var i = 0; i <= upsideRight; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.5*Math.sin(j));
-      vertices = vertices.concat(0.5*Math.cos(j));
-    }
-    console.log(ret.length);
-    for (var i = upsideLeft; i <= 360; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.5*Math.sin(j));
-      vertices = vertices.concat(0.5*Math.cos(j));
-    }
-    ret = ret.concat(0);
-    ret = ret.concat(vertices.length / 2);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), 0.5 * Math.cos(degToRad(upsideRight))]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideRight)), 0.075]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), 0.5 * Math.cos(degToRad(upsideLeft))]);
-    vertices = vertices.concat([0.5 * Math.sin(degToRad(upsideLeft)), 0.075]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    vertices = vertices.concat([0.15, -0.15]);
-    vertices = vertices.concat([0.2, -0.03]);
-    vertices = vertices.concat([-0.18, -0.15]);
-    vertices = vertices.concat([-0.18, -0.03]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 270; i <= 360; i += delta) {
-      var j = degToRad(i);
-      vertices = vertices.concat(0.2*Math.sin(j) + 0.135);
-      vertices = vertices.concat(0.2*Math.cos(j) + 0.075);
-      vertices = vertices.concat(0.05*Math.sin(j) + 0.115);
-      vertices = vertices.concat(0.05*Math.cos(j) + 0.075);
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    vertices = vertices.concat([0.05*Math.sin(degToRad(360)) + 0.11, 0.05*Math.cos(degToRad(360)) + 0.075]);
-    vertices = vertices.concat([0.2, 0.05*Math.cos(degToRad(360)) + 0.075]);
-    
-    vertices = vertices.concat([0.2*Math.sin(degToRad(360)) + 0.13, 0.2*Math.cos(degToRad(360)) + 0.075]);
-    vertices = vertices.concat([0.2, 0.27]);
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 290; i <= 340; i += 10) {
-      vertices = vertices.concat(0.4*Math.sin(degToRad(i)));
-      vertices = vertices.concat(0.4*Math.cos(degToRad(i)));
-      vertices = vertices.concat(0.3*Math.sin(degToRad(i)));
-      vertices = vertices.concat(0.3*Math.cos(degToRad(i)));
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 110; i <= 290; i += delta) {
-      vertices = vertices.concat(0.046*Math.sin(degToRad(i)) - 0.33);
-      vertices = vertices.concat(0.046*Math.cos(degToRad(i)) + 0.12);
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
-    ret = ret.concat(vertices.length / 2);
-    for (var i = 340; i <= 360; i += delta) {
-      vertices = vertices.concat(0.048*Math.sin(degToRad(i)) - 0.12);
-      vertices = vertices.concat(0.048*Math.cos(degToRad(i)) + 0.33);
-    }
-    for (var i = 0; i <= 160; i += delta) {
-      vertices = vertices.concat(0.048*Math.sin(degToRad(i)) - 0.12);
-      vertices = vertices.concat(0.048*Math.cos(degToRad(i)) + 0.33);
-    }
-    ret = ret.concat(vertices.length / 2 - last);
-    last = vertices.length / 2;
+    /*
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+       5----- 6
+      /|     /|
+    1-----2   |
+    |  |  |   |
+    |  4--|---7
+    | /   |  /
+    0-----3
+    */
+    // quad(0, 1, 3, 2);
+    // quad(1, 0, 3, 2);
+    // quad(2, 3, 7, 6);
+    // quad(3, 0, 4, 7);
+    // quad(4, 5, 6, 7);
+    // quad(5, 4, 0, 1);
+    // quad(6, 5, 1, 2);
+    quad(0, 1, 2, 3);
+    quad(4, 5, 6, 7);
+    quad(0, 1, 5, 4);
+    quad(3, 2, 6, 7);
+    // quad(2, 6, 7, 3);
+    // quad(0, 4, 7, 3);
+    // quad(0, 4, 5, 1);
+    push_rect(0, 1, 2, 3);
+    push_rect(4, 5, 6, 7);
+    push_rect(8, 9, 10, 11);
+    push_rect(12, 13, 14, 15);
+    push_rect(16, 17, 18, 19);
+    push_rect(20, 21, 22, 23);
+    push_rect(12, 13, 1, 0);
+    push_rect(13, 18, 6, 1);
+    push_rect(18, 19, 7, 6);
+    push_rect(19, 16, 4, 7);
+    push_rect(16, 21, 9, 4);
+    push_rect(21, 22, 10, 9);
+    push_rect(22, 23, 11, 10);
+    push_rect(23, 20, 8, 11);
+    push_rect(20, 15, 3, 8);
+    push_rect(15, 12, 0, 3);
+
+    // Membuat vertex buffer object (CPU Memory <==> GPU Memory)
+    var vertexBufferObject = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferObject);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    
-    var aPosition = gl.getAttribLocation(program, 'aPosition');
-    if (aPosition < 0) {
-      alert('Gagal mendapat aPosition');
-      return;
-    }
-    console.log(aPosition);
-    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aPosition);
 
-    
 
-    return ret;
+    // Membuat sambungan untuk attribute
+    var vPosition = gl.getAttribLocation(program, 'vPosition');
+    var vColor = gl.getAttribLocation(program, 'vColor');
+    gl.vertexAttribPointer(
+      vPosition,    // variabel yang memegang posisi attribute di shader
+      3,            // jumlah elemen per atribut
+      gl.FLOAT,     // tipe data atribut
+      gl.FALSE, 
+      6 * Float32Array.BYTES_PER_ELEMENT, // ukuran byte tiap verteks (overall) 
+      0                                   // offset dari posisi elemen di array
+    );
+    gl.vertexAttribPointer(vColor, 3, gl.FLOAT, gl.FALSE,
+      6 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(vPosition);
+    gl.enableVertexAttribArray(vColor);
 
-  }
-
-  function anotherBuffer() {
-    var ret = [];
-    var vertices = [];
-    
-    var vertexBuffer = gl.createBuffer();
-    if (!vertexBuffer) {
-      alert("Gagal membuat buffer");
-      return -1;
-    }
-
-    
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    var uFragColor = gl.getUniformLocation(program2, 'uFragColor');
-    if (uFragColor < 0) {
-      alert('Gagal mendapat fragColor');
-      return;
-    }
-    var aPosition = gl.getAttribLocation(program2, 'aPosition');
-    // console.log(aPosition);
-    if (aPosition < 0) {
-      alert('Gagal mendapat aPosition');
-      return;
-    }
-
-    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-    
-    gl.enableVertexAttribArray(aPosition);
-    return ret;
-  }
-
-  function draw() {
-    var arrayBuffer = initBuffers(gl);
+    // Membuat sambungan untuk uniform
     var thetaUniformLocation = gl.getUniformLocation(program, 'theta');
     var theta = 0;
-    gl.uniform1f(thetaUniformLocation, theta);
-    var scaleXUniformLocation = gl.getUniformLocation(program, 'scaleX');
-    var scaleX = 1.0;
-    gl.uniform1f(scaleXUniformLocation, scaleX);
-    var scaleYUniformLocation = gl.getUniformLocation(program, 'scaleY');
-    var scaleY = 1.0;
-    gl.uniform1f(scaleYUniformLocation, scaleY);
-    var transXUniformLocation = gl.getUniformLocation(program, 'transX');
-    gl.uniform1f(transXUniformLocation, 0);
+    var thetaSpeed = 0.0;
+    var axis = [true, true, true];
+    var x = 0;
+    var y = 1;
+    var z = 2;
 
+    // Definisi untuk matriks model
+    var mmLoc = gl.getUniformLocation(program, 'modelMatrix');
+    var mm = glMatrix.mat4.create();
     
-    
-  
-    var uFragColor = gl.getUniformLocation(program, 'uFragColor');
-    if (uFragColor < 0) {
-      alert('Gagal mendapat fragColor');
-      return;
+    glMatrix.mat4.translate(mm, mm, [0.0, 0.0, -2.0]);
+
+    // Definisi untuk matrix view dan projection
+    var vmLoc = gl.getUniformLocation(program, 'viewMatrix');
+    var vm = glMatrix.mat4.create();
+    var pmLoc = gl.getUniformLocation(program, 'projectionMatrix');
+    var pm = glMatrix.mat4.create();
+    var camera = {x: 0.0, y: 0.0, z:0.0};
+    glMatrix.mat4.perspective(pm,
+      glMatrix.glMatrix.toRadian(90), // fovy dalam radian
+      canvas.width/canvas.height,     // aspect ratio
+      0.5,  // near
+      10.0, // far  
+    );
+    gl.uniformMatrix4fv(pmLoc, false, pm);
+
+    // Kontrol menggunakan keyboard
+    function onKeyDown(event) {
+      if (event.keyCode == 49) thetaSpeed -= 0.01;       // key '1'
+      else if (event.keyCode == 50) thetaSpeed += 0.01;  // key '2'
+      else if (event.keyCode == 48) thetaSpeed = 0;       // key '0'
+      if (event.keyCode == 88) axis[x] = !axis[x];
+      if (event.keyCode == 89) axis[y] = !axis[y];
+      if (event.keyCode == 90) axis[z] = !axis[z];
+      if (event.keyCode == 38) camera.z -= 0.1;
+      else if (event.keyCode == 40) camera.z += 0.1;
+      if (event.keyCode == 37) camera.x -= 0.1;
+      else if (event.keyCode == 39) camera.x += 0.1;
     }
+    document.addEventListener('keydown', onKeyDown);
+
+    function matrix_multiplication(a, b) {
+      var c1,c2,c3,c4;
+      c1 = a[0]*b[0] + a[4]*b[1] + a[8]*b[2] + a[12]*b[3]
+      c2 = a[1]*b[0] + a[5]*b[1] + a[9]*b[2] + a[13]*b[3]
+      c3 = a[2]*b[0] + a[6]*b[1] + a[10]*b[2] + a[14]*b[3]
+      c4 = a[3]*b[0] + a[7]*b[1] + a[11]*b[2] + a[15]*b[3]
+      return [c1,c2,c3,c4]
+    }
+
+    function calcDistance(point, plane) {
+      var v = glMatrix.vec3.create();
+      var a = glMatrix.vec3.create();
+      var b = glMatrix.vec3.create();
+      var c = glMatrix.vec3.create();
+      glMatrix.vec3.subtract(v, point, plane[0]);
+      glMatrix.vec3.subtract(a, plane[1], plane[0]);
+      glMatrix.vec3.subtract(b, plane[2], plane[1]);
+      glMatrix.vec3.cross(c, a, b);
+      return Math.abs(glMatrix.vec3.dot(v, c));
+    }
+
+    function detect(curF) {
+      var changeX = 0;
+      var changeY = 0;
+      var changeZ = 0;
+      /*
+       5----- 6
+      /|     /|
+    1-----2   |
+    |  |  |   |
+    |  4--|---7
+    | /   |  /
+    0-----3
+    */
+      for (i = 0; i < curF.length; i++) {
+        if (calcDistance(curF[i], cube.top) < eps) {
+          changeY = 1;
+        }
+        if (calcDistance(curF[i], cube.bottom) < eps) {
+          changeY = 1;
+        }
+        if (calcDistance(curF[i], cube.left) < eps) {
+          changeX = 1;
+        }
+        if (calcDistance(curF[i], cube.right) < eps) {
+          changeX = 1;
+        }
+        if (calcDistance(curF[i], cube.front) < eps) {
+          changeZ = 1;
+        }
+        if (calcDistance(curF[i], cube.back) < eps) {
+          changeZ = 1;
+        }
+        // alert(calcDistance(curF[i], cube.top));
+        //   console.log(calcDistance(curF[i], cube.bottom));
+        //     console.log(calcDistance(curF[i], cube.right));
+        //       console.log(calcDistance(curF[i], cube.left));
+        //         console.log(calcDistance(curF[i], cube.front));
+        //           console.log(calcDistance(curF[i], cube.back));
+      }
+      if (changeX > 0) {
+        dirFX *= -1;
+      }
+      if (changeY > 0) {
+        dirFY *= -1;
+      }
+      if (changeZ > 0) {
+        dirFZ *= -1;
+      }
+    }
+
     function render() {
-      theta += 0.0116;
-      gl.uniform1f(thetaUniformLocation, theta);
-      gl.uniform1f(scaleYUniformLocation, 1.0);
-      gl.uniform1f(scaleXUniformLocation, 1.0);
-      gl.uniform1f(transXUniformLocation, -0.5);
-      
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // thetaSpeed = 0.01;
+      theta += thetaSpeed;
+      if (axis[z]) glMatrix.mat4.rotateZ(mm, mm, thetaSpeed);
+      if (axis[y]) glMatrix.mat4.rotateY(mm, mm, thetaSpeed);
+      if (axis[x]) glMatrix.mat4.rotateX(mm, mm, thetaSpeed);
+      gl.uniformMatrix4fv(mmLoc, false, mm);
 
-      gl.clearColor(0.663, 0.663, 0.663, 0.8);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform4f(uFragColor, 0, 0, 0, 1);
-      gl.drawArrays(gl.POINTS, 0, arrayBuffer[1]);
-      gl.drawArrays(gl.LINE_STRIP, arrayBuffer[2], arrayBuffer[3]);
-      gl.drawArrays(gl.LINE_STRIP, arrayBuffer[4], arrayBuffer[5]);
-      gl.drawArrays(gl.POINTS, arrayBuffer[6], arrayBuffer[7]);
-      gl.drawArrays(gl.POINTS, arrayBuffer[8], arrayBuffer[9]);
-      gl.drawArrays(gl.LINE_STRIP, arrayBuffer[10], arrayBuffer[11]);
+      glMatrix.mat4.lookAt(vm,
+        [camera.x, camera.y, camera.z], // di mana posisi kamera (posisi)
+        [0.0, 0.0, -2.0], // ke mana kamera menghadap (vektor)
+        [0.0, 1.0, 0.0]  // ke mana arah atas kamera (vektor)
+      );
+      gl.uniformMatrix4fv(vmLoc, false, vm);
+      gl.drawArrays(gl.LINES, 0, 32);
+      var mmf = glMatrix.mat4.create();
+      glMatrix.mat4.copy(mmf, mm);
+      glMatrix.mat4.translate(mmf, mmf, [moveFX, moveFY, moveFZ])
+      glMatrix.mat4.rotate(mmf, mmf, rotFY, [0.0, 1.0, 0.0])
+      glMatrix.mat4.scale(mmf, mmf, [0.25, 0.25, 0.25])
+      var curPositionF = [];
+      var curPositionCube = [];
+      for(v = 0; v < fPoints.length; v++){
+        var temp = matrix_multiplication(mmf,[...fPoints[v], 1.0]);
+        curPositionF.push(temp);
+      }
 
-
-      if (scaleX >= 1.0) widen = -1.0;
-      else if (scaleX <= -1.0) widen = 1.0;
-      scaleX += 0.0116 * widen;
-      gl.uniform1f(scaleXUniformLocation, scaleX);
-
-      gl.uniform1f(thetaUniformLocation, 0);
-      gl.uniform1f(scaleYUniformLocation, scaleY);
-      gl.uniform1f(scaleXUniformLocation, scaleX);
-      gl.uniform1f(transXUniformLocation, 0.5);
-      gl.uniform4f(uFragColor, 0.231, 0.349, 0.596, 1);
-      gl.enable(gl.BLEND)
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.drawArrays(gl.TRIANGLE_FAN, arrayBuffer[12], arrayBuffer[13]);
-      gl.uniform4f(uFragColor, 1, 1, 1, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, arrayBuffer[14], arrayBuffer[15]);
-      gl.drawArrays(gl.TRIANGLE_STRIP, arrayBuffer[16], arrayBuffer[17]);
-      gl.drawArrays(gl.TRIANGLE_STRIP, arrayBuffer[18], arrayBuffer[19]);
-      gl.drawArrays(gl.TRIANGLE_STRIP, arrayBuffer[20], arrayBuffer[21]);
-      gl.uniform4f(uFragColor, 0, 0, 0, 0.1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, arrayBuffer[22], arrayBuffer[23]);
-      gl.drawArrays(gl.TRIANGLE_FAN, arrayBuffer[24], arrayBuffer[25]);
-      gl.drawArrays(gl.TRIANGLE_FAN, arrayBuffer[26], arrayBuffer[27]);
+      for(v = 0; v < cubePoints.length; v++){
+        var temp = matrix_multiplication(mm,[...cubePoints[v], 1.0]);
+        curPositionCube.push(temp);
+      }
+      /*
+       5----- 6
+      /|     /|
+    1-----2   |
+    |  |  |   |
+    |  4--|---7
+    | /   |  /
+    0-----3
+    */
+      cube.top = [curPositionCube[1], curPositionCube[2], curPositionCube[6]];
+      cube.bottom = [curPositionCube[0], curPositionCube[4], curPositionCube[7]];
+      cube.right = [curPositionCube[2], curPositionCube[6], curPositionCube[7]];
+      cube.left = [curPositionCube[0], curPositionCube[1], curPositionCube[5]];
+      cube.front = [curPositionCube[0], curPositionCube[1], curPositionCube[2]];
+      cube.back = [curPositionCube[4], curPositionCube[5], curPositionCube[6]];
+      detect(curPositionF);
+      rotFY += 0.01;
+      moveFX += dirFX * 0.01 ;
+      moveFY += dirFY * 0.01;
+      moveFZ += dirFZ * 0.01;
+      gl.uniformMatrix4fv(mmLoc, false, mmf);
+      gl.drawArrays(gl.TRIANGLES, 32, 96);
       requestAnimationFrame(render);
     }
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
     render();
   }
-
-  
-
-  function resizer() {
-    var width = canvas.getAttribute("width"), height = canvas.getAttribute("height");
-    if (!width || width < 0) {
-      canvas.width = window.innerWidth;
-      canvas.maxWidth = window.innerWidth;
-    }
-    if (!height || height < 0) {
-      canvas.height = window.innerHeight;
-      canvas.maxHeight = window.innerHeight;
-    }
-
-    var min = Math.min.apply(Math, [gl.maxWidth, gl.maxHeight, window.innerWidth, window.innerHeight]);
-    canvas.width = min;
-    canvas.height = min;
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    draw();
-  }
-
-  function initGLSize() {
-    var width = canvas.getAttribute("width"), height = canvas.getAttribute("height");
-    if (width) {
-      gl.maxWidth = width;
-    }
-    if (height) {
-      gl.maxHeight = height;
-    }
-  }
-
-  
 })();
